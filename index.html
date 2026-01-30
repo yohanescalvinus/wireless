@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Form Jemaat Baru - WhatsApp Generator</title>
+    <title>Form Jemaat Baru - GKY Cibubur</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -220,6 +220,23 @@
             background-color: var(--danger-dark);
         }
 
+        /* Counter Anggota Keluarga */
+        .family-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--bg-light);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin-left: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .family-counter i {
+            color: var(--primary-color);
+        }
+
         /* Tombol-tombol */
         .btn {
             display: inline-flex;
@@ -405,6 +422,12 @@
             .container {
                 padding: 15px;
             }
+            
+            .family-counter {
+                margin-left: 5px;
+                padding: 4px 8px;
+                font-size: 0.8rem;
+            }
         }
     </style>
 </head>
@@ -412,7 +435,7 @@
     <div class="header-container">
         <div>
             <h1>Form Jemaat Baru</h1>
-            <p class="subtitle">GKY CIBUBUR</p>
+            <p class="subtitle">GKY Cibubur</p>
         </div>
         <div class="theme-toggle" id="themeToggle">
             <i class="fas fa-sun"></i>
@@ -424,6 +447,7 @@
         <div class="instructions">
             <h3><i class="fas fa-info-circle"></i> Petunjuk Penggunaan</h3>
             <p>Isi semua formulir dengan data jemaat baru. Sistem akan menghasilkan pesan WhatsApp yang sudah diformat. Anda dapat mengirim langsung ke Hamba Tuhan atau ke nomor WhatsApp lainnya.</p>
+            <p><strong>Catatan:</strong> Pesan akan menampilkan jumlah jemaat baru secara otomatis berdasarkan jumlah anggota keluarga yang didaftarkan.</p>
         </div>
         
         <div class="form-section">
@@ -449,14 +473,20 @@
         </div>
         
         <div class="form-section">
-            <h2><i class="fas fa-users"></i> Data Jemaat Tambahan (Jika ada)</h2>
+            <h2>
+                <i class="fas fa-users"></i> Data Jemaat Tambahan (Jika ada)
+                <div class="family-counter" id="familyCounter">
+                    <i class="fas fa-user-friends"></i>
+                    <span id="familyCount">0 Anggota Keluarga</span>
+                </div>
+            </h2>
             <div id="additionalMembersContainer">
                 <!-- Anggota tambahan akan ditambahkan di sini -->
             </div>
             <button type="button" class="btn btn-secondary" id="addMemberBtn">
                 <i class="fas fa-user-plus"></i> Tambah Anggota Keluarga
             </button>
-            <p class="note">Tambahkan anggota keluarga lain yang datang bersama jemaat utama</p>
+            <p class="note">Tambahkan anggota keluarga lain yang datang bersama jemaat utama. Setiap anggota akan dihitung dalam total jemaat baru.</p>
         </div>
         
         <div class="form-section">
@@ -521,6 +551,8 @@
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = themeToggle.querySelector('i');
         const themeText = themeToggle.querySelector('.theme-text');
+        const familyCountElement = document.getElementById('familyCount');
+        const familyCounter = document.getElementById('familyCounter');
         
         // Fungsi untuk menginisialisasi tema
         function initializeTheme() {
@@ -556,6 +588,33 @@
         function toggleTheme() {
             currentTheme = currentTheme === 'light' ? 'dark' : 'light';
             applyTheme();
+        }
+        
+        // Fungsi untuk menghitung jumlah anggota keluarga yang valid
+        function countValidFamilyMembers() {
+            // Hitung anggota keluarga yang memiliki nama (tidak kosong)
+            const validMembers = additionalMembers.filter(member => 
+                member.name && member.name.trim() !== ''
+            ).length;
+            
+            return validMembers;
+        }
+        
+        // Fungsi untuk memperbarui tampilan counter keluarga
+        function updateFamilyCounter() {
+            const validCount = countValidFamilyMembers();
+            familyCountElement.textContent = `${validCount} Anggota Keluarga`;
+            
+            // Update warna counter berdasarkan jumlah
+            if (validCount > 0) {
+                familyCounter.style.backgroundColor = 'var(--primary-color)';
+                familyCounter.style.color = 'white';
+                familyCounter.querySelector('i').style.color = 'white';
+            } else {
+                familyCounter.style.backgroundColor = 'var(--bg-light)';
+                familyCounter.style.color = 'var(--text-color)';
+                familyCounter.querySelector('i').style.color = 'var(--primary-color)';
+            }
         }
         
         // Fungsi untuk menormalisasi nomor telepon (0 → 62)
@@ -690,6 +749,7 @@
             
             nameInput.addEventListener('input', function() {
                 updateMemberData(memberId, 'name', this.value);
+                updateFamilyCounter();
                 updateMessagePreview();
             });
             
@@ -703,6 +763,9 @@
             removeBtn.addEventListener('click', function() {
                 removeMember(memberId);
             });
+            
+            // Update counter keluarga
+            updateFamilyCounter();
         }
         
         // Fungsi untuk memperbarui data anggota
@@ -724,29 +787,45 @@
             // Hapus dari array
             additionalMembers = additionalMembers.filter(member => member.id !== id);
             
-            // Update preview
+            // Update counter dan preview
+            updateFamilyCounter();
             updateMessagePreview();
         }
         
-        // Fungsi untuk menghasilkan pesan WhatsApp
+        // Fungsi untuk menghasilkan pesan WhatsApp dengan header jumlah jemaat
         function generateMessage() {
             const name = mainNameInput.value.trim();
             const contact = normalizePhoneNumber(mainContactInput.value);
             const motivation = motivationInput.value.trim();
             
-            let message = "Shalom, saya ingin melaporkan jemaat baru:\n\n";
+            // Hitung total jemaat (jemaat utama + anggota keluarga yang valid)
+            const validMembersCount = countValidFamilyMembers();
+            const totalJemaat = 1 + validMembersCount; // 1 untuk jemaat utama
+            
+            // Buat header berdasarkan jumlah jemaat
+            let header = "";
+            if (totalJemaat === 1) {
+                header = "1 Jemaat Baru\n";
+            } else {
+                header = `${totalJemaat} Jemaat Baru dalam 1 Keluarga\n`;
+            }
+            
+            let message = `${header}\n`;
+            message += "Shalom, saya ingin melaporkan jemaat baru:\n\n";
             message += `Nama: ${name}\n`;
             message += `Kontak: ${contact}\n`;
             message += `Motivasi: ${motivation}\n`;
             
             // Tambahkan data anggota keluarga jika ada
-            if (additionalMembers.length > 0) {
+            if (validMembersCount > 0) {
                 message += "\n--- Anggota Keluarga Lainnya ---\n";
                 
-                additionalMembers.forEach((member, index) => {
-                    if (member.name.trim()) {
+                let memberIndex = 1;
+                additionalMembers.forEach((member) => {
+                    if (member.name && member.name.trim()) {
                         const memberContact = member.contact.trim() ? ` (Kontak: ${normalizePhoneNumber(member.contact)})` : '';
-                        message += `${index + 1}. ${member.name}${memberContact}\n`;
+                        message += `${memberIndex}. ${member.name.trim()}${memberContact}\n`;
+                        memberIndex++;
                     }
                 });
             }
@@ -785,13 +864,23 @@
         }
         
         // Event Listeners
-        mainNameInput.addEventListener('input', updateMessagePreview);
-        mainContactInput.addEventListener('input', updateMessagePreview);
-        motivationInput.addEventListener('input', updateMessagePreview);
+        mainNameInput.addEventListener('input', function() {
+            updateMessagePreview();
+        });
+        
+        mainContactInput.addEventListener('input', function() {
+            updateMessagePreview();
+        });
+        
+        motivationInput.addEventListener('input', function() {
+            updateMessagePreview();
+        });
+        
         otherNumberInput.addEventListener('input', validateOtherNumber);
         
         addMemberBtn.addEventListener('click', function() {
             addMember();
+            updateMessagePreview();
         });
         
         sendToHambaTuhanBtn.addEventListener('click', function() {
@@ -856,6 +945,7 @@
         // Inisialisasi tema dan preview pesan saat halaman dimuat
         document.addEventListener('DOMContentLoaded', function() {
             initializeTheme();
+            updateFamilyCounter();
             updateMessagePreview();
         });
     </script>
